@@ -18,19 +18,27 @@
  */
 package net.hydromatic.sml;
 
+import com.google.common.collect.ImmutableList;
+
+import net.hydromatic.sml.util.MartelliUnifier;
+import net.hydromatic.sml.util.RobinsonUnifier;
 import net.hydromatic.sml.util.Unifier;
 
 import org.hamcrest.Matcher;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 
-/** Test for {@link net.hydromatic.sml.util.Unifier}. */
-public class UnifierTest {
-  private final Unifier unifier = new Unifier();
+/** Test for {@link RobinsonUnifier}. */
+public abstract class UnifierTest {
+  final Unifier unifier = createUnifier();
+
+  protected abstract Unifier createUnifier();
 
   private Unifier.Sequence a(Unifier.Term... terms) {
     return unifier.apply("a", terms);
@@ -116,15 +124,17 @@ public class UnifierTest {
   private final Unifier.Variable W = unifier.variable("W");
   private final Unifier.Variable Z = unifier.variable("Z");
 
-  private void assertThatUnify(Unifier.Term e1, Unifier.Term e2,
+  void assertThatUnify(Unifier.Term e1, Unifier.Term e2,
       Matcher<String> matcher) {
-    final Unifier.Substitution unify = unifier.unify(e1, e2);
+    final Unifier.Substitution unify =
+        unifier.unify(ImmutableList.of(new Unifier.TermTerm(e1, e2)));
     assertThat(unify, notNullValue());
     assertThat(unify.toString(), matcher);
   }
 
-  private void assertThatCannotUnify(Unifier.Term e1, Unifier.Term e2) {
-    assertThat(unifier.unify(e1, e2), nullValue());
+  void assertThatCannotUnify(Unifier.Term e1, Unifier.Term e2) {
+    assertThat(unifier.unify(ImmutableList.of(new Unifier.TermTerm(e1, e2))),
+        nullValue());
   }
 
   @Test public void test1() {
@@ -249,6 +259,57 @@ public class UnifierTest {
     final Unifier.Term e2 = p(f(bill()), Z, g(b()));
     assertThatUnify(e1, e2, is("[bill/X, g(b)/Y, a/Z]"));
   }
+
+  /** Variant of test that uses
+   * {@link net.hydromatic.sml.util.RobinsonUnifier}. */
+  public static class RobinsonUnifierTest extends UnifierTest {
+    protected Unifier createUnifier() {
+      return new RobinsonUnifier();
+    }
+  }
+
+  /** Variant of test that uses
+   * {@link net.hydromatic.sml.util.MartelliUnifier}. */
+  public static class MartelliUnifierTest extends UnifierTest {
+    protected Unifier createUnifier() {
+      return new MartelliUnifier();
+    }
+
+    /** Solves the equations from the S combinator,
+     * "{@code fn x => fn y => fn z => x z (z y)}", in [<a href=
+     * "http://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf">
+     * Wand 87</a>]. */
+    @Test public void test20() {
+      final Unifier.Variable t0 = unifier.variable("T0");
+      final Unifier.Variable t1 = unifier.variable("T1");
+      final Unifier.Variable t2 = unifier.variable("T2");
+      final Unifier.Variable t3 = unifier.variable("T3");
+      final Unifier.Variable t4 = unifier.variable("T4");
+      final Unifier.Variable t5 = unifier.variable("T5");
+      final Unifier.Variable t6 = unifier.variable("T6");
+      final Unifier.Variable t7 = unifier.variable("T7");
+      final Unifier.Variable t8 = unifier.variable("T8");
+      final Unifier.Variable t9 = unifier.variable("T9");
+      final Unifier.TermTerm[] termTerms = {
+          new Unifier.TermTerm(t0, unifier.apply("->", t1, t2)),
+          new Unifier.TermTerm(t2, unifier.apply("->", t3, t4)),
+          new Unifier.TermTerm(t4, unifier.apply("->", t5, t6)),
+          new Unifier.TermTerm(t1,
+              unifier.apply("->", t8, unifier.apply("->", t7, t6))),
+          new Unifier.TermTerm(t8, t5),
+          new Unifier.TermTerm(unifier.apply("->", t9, t7), t3),
+          new Unifier.TermTerm(t9, t5)
+      };
+      final Unifier.Substitution unify =
+          unifier.unify(Arrays.asList(termTerms));
+      assertThat(unify, notNullValue());
+      assertThat(unify.toString(),
+          is("[->(T1, T2)/T0, ->(T8, ->(T7, T6))/T1, ->(T3, T4)/T2,"
+              + " ->(T9, T7)/T3, ->(T5, T6)/T4, T5/T8, T5/T9]"));
+    }
+  }
+
+
 }
 
 // End UnifierTest.java

@@ -31,8 +31,11 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
-/** Robinson's unification algorithm. */
-public class Unifier {
+/** Given pairs of terms, finds a substitution to minimize those pairs of
+ * terms. */
+public abstract class Unifier {
+  static final Substitution EMPTY = new Substitution(ImmutableMap.of());
+
   private int varId;
   private final Map<String, Variable> variableMap = new HashMap<>();
   private final Map<String, Atom> atomMap = new HashMap<>();
@@ -89,7 +92,7 @@ public class Unifier {
     return new Substitution(mapBuilder.build());
   }
 
-  private static Sequence sequenceApply(Map<Variable, Term> substitutions,
+  static Sequence sequenceApply(Map<Variable, Term> substitutions,
       Iterable<Term> terms) {
     final ImmutableList.Builder<Term> newTerms = ImmutableList.builder();
     for (Term term : terms) {
@@ -98,71 +101,7 @@ public class Unifier {
     return new Sequence(newTerms.build());
   }
 
-  /**
-   * Applies s1 to the elements of s2 and adds them into a single list.
-   */
-  static Map<Variable, Term> compose(Map<Variable, Term> s1,
-      Map<Variable, Term> s2) {
-    Map<Variable, Term> composed = new HashMap<>(s1);
-    for (Map.Entry<Variable, Term> entry2 : s2.entrySet()) {
-      composed.put(entry2.getKey(), entry2.getValue().apply(s1));
-    }
-    return composed;
-  }
-
-  private @Nullable Substitution sequenceUnify(Sequence lhs,
-      Sequence rhs) {
-    if (lhs.terms.size() != rhs.terms.size()) {
-      return null;
-    }
-    if (lhs.terms.isEmpty()) {
-      return EMPTY;
-    }
-    Term firstLhs = lhs.terms.get(0);
-    Term firstRhs = rhs.terms.get(0);
-    Substitution subs1 = unify(firstLhs, firstRhs);
-    if (subs1 != null) {
-      Sequence restLhs = sequenceApply(subs1.resultMap, skip(lhs.terms));
-      Sequence restRhs = sequenceApply(subs1.resultMap, skip(rhs.terms));
-      Substitution subs2 = sequenceUnify(restLhs, restRhs);
-      if (subs2 != null) {
-        Map<Variable, Term> joined = new HashMap<>();
-        joined.putAll(subs1.resultMap);
-        joined.putAll(subs2.resultMap);
-        return new Substitution(joined);
-      }
-    }
-    return null;
-  }
-
-  private static <E> List<E> skip(List<E> list) {
-    return list.subList(1, list.size());
-  }
-
-  public @Nullable Substitution unify(List<TermTerm> termPairs) {
-    switch (termPairs.size()) {
-    case 1:
-      return unify(termPairs.get(0).left, termPairs.get(0).right);
-    default:
-      throw new AssertionError();
-    }
-  }
-
-  public @Nullable Substitution unify(Term lhs, Term rhs) {
-    if (lhs instanceof Variable) {
-      return new Substitution(ImmutableMap.of((Variable) lhs, rhs));
-    }
-    if (rhs instanceof Variable) {
-      return new Substitution(ImmutableMap.of((Variable) rhs, lhs));
-    }
-    if (lhs instanceof Atom && rhs instanceof Atom) {
-      return lhs == rhs ? EMPTY : null;
-    }
-    if (lhs instanceof Sequence && rhs instanceof Sequence) {
-      return sequenceUnify((Sequence) lhs, (Sequence) rhs);
-    }
-    return null;
-  }
+  public @Nullable abstract Substitution unify(List<TermTerm> termPairs);
 
   /** The results of a successful unification. Gives access to the raw variable
    * mapping that resulted from the algorithm, but can also resolve a variable
@@ -210,12 +149,11 @@ public class Unifier {
     }
   }
 
-  private static final Substitution EMPTY =
-      new Substitution(ImmutableMap.of());
-
   /** Term (variable, symbol or node). */
   public interface Term {
     Term apply(Map<Variable, Term> substitutions);
+
+    boolean contains(Variable variable);
   }
 
   /** A symbol that has no children. */
@@ -231,6 +169,10 @@ public class Unifier {
 
     public Term apply(Map<Variable, Term> substitutions) {
       return this;
+    }
+
+    public boolean contains(Variable variable) {
+      return false;
     }
   }
 
@@ -249,6 +191,10 @@ public class Unifier {
 
     public Term apply(Map<Variable, Term> substitutions) {
       return substitutions.getOrDefault(this, this);
+    }
+
+    public boolean contains(Variable variable) {
+      return variable == this;
     }
   }
 
@@ -272,7 +218,7 @@ public class Unifier {
    * <p>A sequence [a b c] is often printed "a(b, c)", as if "a" is the type of
    * node and "b" and "c" are its children. */
   public static final class Sequence implements Term {
-    private final List<Term> terms;
+    final List<Term> terms;
 
     Sequence(List<Term> terms) {
       this.terms = ImmutableList.copyOf(terms);
@@ -304,7 +250,20 @@ public class Unifier {
     }
 
     public Term apply(Map<Variable, Term> substitutions) {
-      return sequenceApply(substitutions, terms);
+      final Sequence sequence = sequenceApply(substitutions, terms);
+      if (sequence.equals(this)) {
+        return this;
+      }
+      return sequence;
+    }
+
+    public boolean contains(Variable variable) {
+      for (Term term : terms) {
+        if (term.contains(variable)) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 }

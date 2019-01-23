@@ -31,17 +31,16 @@ import net.hydromatic.sml.eval.Environments;
 import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.util.RobinsonUnifier;
 import net.hydromatic.sml.util.Unifier;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
@@ -102,14 +101,14 @@ public class Compiler {
     final List<Unifier.TermTerm> termPairs = new ArrayList<>();
     typeResolver.terms.forEach(tv ->
         termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
-        new LinkedHashSet<>();
     final Unifier.Substitution substitution =
         typeResolver.unifier.unify(termPairs);
     throw new AssertionError(); // TODO:
   }
 
+  /** Resolves the type of an expression. */
   static class TypeResolver {
-    final Unifier unifier = new Unifier();
+    final RobinsonUnifier unifier = new RobinsonUnifier();
     final List<TermVariable> terms = new ArrayList<>();
     private final TypeSystem typeSystem;
 
@@ -147,6 +146,8 @@ public class Compiler {
         final Unifier.Term falseTerm = deduceType(env, if_.ifFalse);
         v = unifier.variable();
         equiv(trueTerm, v);
+        equiv(falseTerm, v);
+        return v;
       case FN:
         final Ast.Fn fn = (Ast.Fn) node;
         return deduceType(env, fn.match);
@@ -361,6 +362,7 @@ public class Compiler {
     }
   }
 
+  /** Pair consisting of a term and a variable. */
   private static class TermVariable {
     final Unifier.Term term;
     final Unifier.Variable variable;
@@ -375,11 +377,13 @@ public class Compiler {
     }
   }
 
+  /** Type environment. */
   private interface TypeEnv {
     Unifier.Term get(String name);
     TypeEnv bind(String name, Unifier.Term typeTerm);
   }
 
+  /** Empty type environment. */
   enum EmptyTypeEnv implements TypeEnv {
     INSTANCE;
 
@@ -392,6 +396,8 @@ public class Compiler {
     }
   }
 
+  /** A type environment that consists of a type environment plus one
+   * binding. */
   private static class BindTypeEnv implements TypeEnv {
     private final String definedName;
     private final Unifier.Term typeTerm;
