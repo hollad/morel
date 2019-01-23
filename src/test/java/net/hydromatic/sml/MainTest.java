@@ -224,9 +224,12 @@ public class MainTest {
     assertType("1.0 + ~2.0", is("real"));
     assertType("\"\"", is("string"));
     assertType("true andalso false", is("bool"));
-    assertType("fn x => x + 1", is("int -> int"));
     assertType("fn x => fn y => x + y", is("int -> int -> int"));
     assertType("if true then 1.0 else 2.0", is("real"));
+  }
+
+  @Test public void testType1() {
+    assertType("fn x => x + 1", is("int -> int"));
   }
 
   @Ignore // enable this test when we have polymorphic type resolution

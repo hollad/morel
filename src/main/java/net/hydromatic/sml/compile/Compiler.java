@@ -29,16 +29,19 @@ import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.Environment;
 import net.hydromatic.sml.eval.Environments;
 import net.hydromatic.sml.eval.Unit;
-import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.util.Unifier;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
@@ -87,53 +90,98 @@ public class Compiler {
   }
 
   private Type deduceType(Environment env, AstNode node) {
-    final Ast.Exp exp;
-    switch (node.op) {
-    case INT_LITERAL:
-      return PrimitiveType.INT;
-    case REAL_LITERAL:
-      return PrimitiveType.REAL;
-    case STRING_LITERAL:
-      return PrimitiveType.STRING;
-    case BOOL_LITERAL:
-    case ANDALSO:
-    case ORELSE:
-      return PrimitiveType.BOOL;
-    case VAL_DECL:
-      final Ast.VarDecl varDecl = (Ast.VarDecl) node;
-      exp = varDecl.patExps.entrySet().iterator().next().getValue();
-      return deduceType(env, exp);
-    case ID:
-      final Ast.Id id = (Ast.Id) node;
-      final Binding binding = env.get(id.name);
-      if (binding == null) {
-        throw new AssertionError("not found: " + id.name);
+    final TypeResolver typeResolver = new TypeResolver(typeSystem);
+    TypeEnv typeEnv = EmptyTypeEnv.INSTANCE
+        .bind("true", typeResolver.atom(typeSystem.primitiveType("bool")))
+        .bind("false", typeResolver.atom(typeSystem.primitiveType("bool")));
+    final Unifier.Term typeTerm =
+        typeResolver.deduceType(typeEnv, node);
+    if (typeTerm instanceof Unifier.Atom) {
+      return typeResolver.typeSystem.map.get(typeTerm.toString());
+    }
+    final List<Unifier.TermTerm> termPairs = new ArrayList<>();
+    typeResolver.terms.forEach(tv ->
+        termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
+        new LinkedHashSet<>();
+    final Unifier.Substitution substitution =
+        typeResolver.unifier.unify(termPairs);
+    throw new AssertionError(); // TODO:
+  }
+
+  static class TypeResolver {
+    final Unifier unifier = new Unifier();
+    final List<TermVariable> terms = new ArrayList<>();
+    private final TypeSystem typeSystem;
+
+    TypeResolver(TypeSystem typeSystem) {
+      this.typeSystem = typeSystem;
+    }
+
+    private Unifier.Term deduceType(TypeEnv env, AstNode node) {
+      final Unifier.Variable v;
+      final Ast.Exp exp;
+      switch (node.op) {
+      case INT_LITERAL:
+        return atom(PrimitiveType.INT);
+      case REAL_LITERAL:
+        return atom(PrimitiveType.REAL);
+      case STRING_LITERAL:
+        return atom(PrimitiveType.STRING);
+      case BOOL_LITERAL:
+        return atom(PrimitiveType.BOOL);
+      case ANDALSO:
+      case ORELSE:
+        return infix(env, (Ast.InfixCall) node, PrimitiveType.BOOL);
+      case VAL_DECL:
+        final Ast.VarDecl varDecl = (Ast.VarDecl) node;
+        exp = varDecl.patExps.entrySet().iterator().next().getValue();
+        return deduceType(env, exp);
+      case ID:
+        final Ast.Id id = (Ast.Id) node;
+        return env.get(id.name);
+      case IF:
+        // TODO: check that condition has type boolean
+        // TODO: check that ifTrue has same type as ifFalse
+        final Ast.If if_ = (Ast.If) node;
+        final Unifier.Term trueTerm = deduceType(env, if_.ifTrue);
+        final Unifier.Term falseTerm = deduceType(env, if_.ifFalse);
+        v = unifier.variable();
+        equiv(trueTerm, v);
+      case FN:
+        final Ast.Fn fn = (Ast.Fn) node;
+        return deduceType(env, fn.match);
+      case MATCH:
+        final Ast.Match match = (Ast.Match) node;
+        final String parameter = ((Ast.NamedPat) match.pat).name;
+        final Unifier.Variable parameterType = unifier.variable();
+        final TypeEnv env2 = env.bind(parameter, parameterType);
+        final Unifier.Term expType = deduceType(env2, match.e);
+        return unifier.apply("fn", parameterType, expType);
+      case PLUS:
+      case MINUS:
+      case TIMES:
+      case DIVIDE:
+        return infix(env, (Ast.InfixCall) node, PrimitiveType.INT);
+      default:
+        throw new AssertionError("cannot deduce type for " + node.op);
       }
-      return binding.type;
-    case IF:
-      // TODO: check that condition has type boolean
-      // TODO: check that ifTrue has same type as ifFalse
-      final Ast.If if_ = (Ast.If) node;
-      return deduceType(env, if_.ifTrue);
-    case FN:
-      final Ast.Fn fn = (Ast.Fn) node;
-      return deduceType(env, fn.match);
-    case MATCH:
-      final Ast.Match match = (Ast.Match) node;
-      final String parameter = ((Ast.NamedPat) match.pat).name;
-      final Type parameterType = PrimitiveType.INT; // TODO:
-      exp = match.e;
-      final Environment env2 =
-          Environments.add(env, parameter, parameterType, Unit.INSTANCE);
-      final Type expType = deduceType(env2, exp);
-      return typeSystem.fnType(parameterType, expType);
-    case PLUS:
-    case MINUS:
-    case TIMES:
-    case DIVIDE:
-      return deduceType(env, ((Ast.InfixCall) node).a0);
-    default:
-      throw new AssertionError("cannot deduce type for " + node.op);
+    }
+
+    /** Registers an infix operator whose type is the same as its arguments. */
+    private Unifier.Term infix(TypeEnv env, Ast.InfixCall call, Type type) {
+      final Unifier.Atom atom = atom(type);
+      Unifier.Variable v = unifier.variable();
+      equiv(atom, v);
+      call.forEachArg(arg -> equiv(deduceType(env, arg), v));
+      return atom;
+    }
+
+    private void equiv(Unifier.Term term, Unifier.Variable atom) {
+      terms.add(new TermVariable(term, atom));
+    }
+
+    private Unifier.Atom atom(Type type) {
+      return unifier.atom(type.description());
     }
   }
 
@@ -310,6 +358,61 @@ public class Compiler {
 
     public String description() {
       return description;
+    }
+  }
+
+  private static class TermVariable {
+    final Unifier.Term term;
+    final Unifier.Variable variable;
+
+    private TermVariable(Unifier.Term term, Unifier.Variable variable) {
+      this.term = term;
+      this.variable = variable;
+    }
+
+    @Override public String toString() {
+      return term + " = " + variable;
+    }
+  }
+
+  private interface TypeEnv {
+    Unifier.Term get(String name);
+    TypeEnv bind(String name, Unifier.Term typeTerm);
+  }
+
+  enum EmptyTypeEnv implements TypeEnv {
+    INSTANCE;
+
+    @Override public Unifier.Term get(String name) {
+      throw new AssertionError("not found: " + name);
+    }
+
+    @Override public TypeEnv bind(String name, Unifier.Term typeTerm) {
+      return new BindTypeEnv(name, typeTerm, this);
+    }
+  }
+
+  private static class BindTypeEnv implements TypeEnv {
+    private final String definedName;
+    private final Unifier.Term typeTerm;
+    private final TypeEnv parent;
+
+    BindTypeEnv(String definedName, Unifier.Term typeTerm, TypeEnv parent) {
+      this.definedName = Objects.requireNonNull(definedName);
+      this.typeTerm = Objects.requireNonNull(typeTerm);
+      this.parent = Objects.requireNonNull(parent);
+    }
+
+    @Override public Unifier.Term get(String name) {
+      if (name.equals(definedName)) {
+        return typeTerm;
+      } else {
+        return parent.get(name);
+      }
+    }
+
+    @Override public TypeEnv bind(String name, Unifier.Term typeTerm) {
+      return new BindTypeEnv(name, typeTerm, this);
     }
   }
 }

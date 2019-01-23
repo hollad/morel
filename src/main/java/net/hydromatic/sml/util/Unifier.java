@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 
 /** Robinson's unification algorithm. */
 public class Unifier {
+  private int varId;
   private final Map<String, Variable> variableMap = new HashMap<>();
   private final Map<String, Atom> atomMap = new HashMap<>();
   private final Map<String, Sequence> sequenceMap = new HashMap<>();
@@ -53,6 +54,18 @@ public class Unifier {
   /** Creates a variable, or returns an existing one with the same name. */
   public Variable variable(String name) {
     return variableMap.computeIfAbsent(name, Variable::new);
+  }
+
+  /** Creates a new variable, with a new name. */
+  public Variable variable() {
+    for (;;) {
+      final String name = "T" + varId++;
+      if (!variableMap.containsKey(name)) {
+        final Variable variable = new Variable(name);
+        variableMap.put(name, variable);
+        return variable;
+      }
+    }
   }
 
   /** Creates an atom, or returns an existing one with the same name. */
@@ -126,6 +139,15 @@ public class Unifier {
     return list.subList(1, list.size());
   }
 
+  public @Nullable Substitution unify(List<TermTerm> termPairs) {
+    switch (termPairs.size()) {
+    case 1:
+      return unify(termPairs.get(0).left, termPairs.get(0).right);
+    default:
+      throw new AssertionError();
+    }
+  }
+
   public @Nullable Substitution unify(Term lhs, Term rhs) {
     if (lhs instanceof Variable) {
       return new Substitution(ImmutableMap.of((Variable) lhs, rhs));
@@ -197,7 +219,7 @@ public class Unifier {
   }
 
   /** A symbol that has no children. */
-  static final class Atom implements Term {
+  public static final class Atom implements Term {
     final String name;
     Atom(String name) {
       this.name = Objects.requireNonNull(name);
@@ -220,12 +242,28 @@ public class Unifier {
       this.name = Objects.requireNonNull(name);
       Preconditions.checkArgument(!name.equals(name.toLowerCase(Locale.ROOT)));
     }
+
     @Override public String toString() {
       return name;
     }
 
     public Term apply(Map<Variable, Term> substitutions) {
       return substitutions.getOrDefault(this, this);
+    }
+  }
+
+  /** A pair of terms. */
+  public static final class TermTerm {
+    final Term left;
+    final Term right;
+
+    public TermTerm(Term left, Term right) {
+      this.left = Objects.requireNonNull(left);
+      this.right = Objects.requireNonNull(right);
+    }
+
+    @Override public String toString() {
+      return left + " = " + right;
     }
   }
 
