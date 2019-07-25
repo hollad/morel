@@ -1,6 +1,4 @@
 # sleep 2
-cd ~
-rm -rf ~/smlj
 # This is a demo to introduce smlj.
 #
 # smlj is a Java implementation of Standard ML: a small, elegant
@@ -11,7 +9,7 @@ rm -rf ~/smlj
 # with "from" expressions, smlj becomes a powerful query language.
 #
 # To start, let's download and build smlj.
-git clone git@github.com:julianhyde/smlj.git
+git clone git@github.com:julianhyde/smlj.git -b 004-cast
 # sleep 10
 
 cd smlj
@@ -71,10 +69,26 @@ fact 5;
    Here are a couple. *)
 
 (*) "map" applies another function to each element of a list
-let fun map f [] = [] | map f (head :: tail) = (f head) :: (map f tail) fun double n = n * 2 in map double [1, 2, 3, 4] end;
+let
+  fun map f [] = []
+    | map f (head :: tail) = (f head) :: (map f tail)
+  fun double n = n * 2
+in
+  map double [1, 2, 3, 4]
+end;
 
 (*) "filter" keeps only those elements of a list where a predicate is true
-let fun filter p [] = [] | filter p (head :: tail) = if (p head) then (head :: (filter p tail)) else (filter p tail) fun even n = n mod 2 = 0 in filter even [1, 2, 3, 4] end;
+let
+  fun filter p [] = []
+    | filter p (head :: tail) =
+      if (p head) then
+        (head :: (filter p tail))
+      else
+        (filter p tail)
+  fun even n = n mod 2 = 0
+in
+  filter even [1, 2, 3, 4]
+end;
 
 (* You may notice that "map" and "filter" are very similar to the
    "select" and "where" clauses of a SQL statement.
@@ -86,7 +100,7 @@ let fun filter p [] = [] | filter p (head :: tail) = if (p head) then (head :: (
    Can we extend ML syntax to make it easier to write relational
    algebra expressions? You bet! *)
 
-(*) Lets start by defining emp and dept relations as lists of records.
+(*) Let's start by defining emp and dept relations as lists of records.
 val emps =
   [{id = 100, name = "Fred", deptno = 10},
    {id = 101, name = "Velma", deptno = 20},
@@ -107,7 +121,8 @@ from e in emps where (#deptno e) = 30 yield (#id e);
 (*) Join two relations
 from e in emps, d in depts
   where (#deptno e) = (#deptno d)
-  yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
+  yield {id = (#id e), deptno = (#deptno e),
+         ename = (#name e), dname = (#name d)};
 
 (*) A query with "exists" and a correlated sub-query.
 (*) We define the "exists" function ourselves: no need for a built-in!
