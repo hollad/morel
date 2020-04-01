@@ -36,7 +36,6 @@ import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
-import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
@@ -51,8 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -872,25 +869,22 @@ public abstract class Codes {
               .collect(Collectors.toList()));
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
-    final SortedMap<String, TreeMap<String, Object>> structureMap =
-        new TreeMap<>();
-    BUILT_IN_VALUES.forEach((key, value) -> {
+    // Dummy type system, thrown away after this method
+    final TypeSystem typeSystem = new TypeSystem();
+
+    BuiltIn.forEach(typeSystem, (key, type) -> {
+      final Object value = Objects.requireNonNull(BUILT_IN_VALUES.get(key));
       valueMap.put(key.fullName, value);
       if (key.alias != null) {
         valueMap.put(key.alias, value);
       }
-      if (key.structure != null) {
-        structureMap.compute(key.structure, (name, map) -> {
-          if (map == null) {
-            map = new TreeMap<>();
-          }
-          map.put(key.mlName, value);
-          return map;
-        });
-      }
     });
-    structureMap.forEach((structure, map) ->
-        valueMap.put(structure, ImmutableList.copyOf(map.values())));
+    //noinspection UnstableApiUsage
+    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
+        valueMap.put(structure.name,
+            structure.memberMap.values().stream()
+                .map(BUILT_IN_VALUES::get)
+                .collect(ImmutableList.toImmutableList())));
     assert valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
         : "no implementation for "
         + minus(BuiltIn.BY_ML_NAME.keySet(), valueMap.keySet());
@@ -941,18 +935,13 @@ public abstract class Codes {
       }
     });
 
-    final TreeMap<String, Type> nameTypes = new TreeMap<>(RecordType.ORDERING);
     final List<Object> valueList = new ArrayList<>();
-    BuiltIn.BY_STRUCTURE.forEach((structure, map) -> {
-      map.forEach((name, builtIn) -> {
-        nameTypes.put(name, builtIn.typeFunction.apply(typeSystem));
-        valueList.add(BUILT_IN_VALUES.get(builtIn));
-      });
-      final Type recordType = typeSystem.recordType(nameTypes);
-      hEnv[0] = hEnv[0]
-          .bind(structure, recordType, ImmutableList.copyOf(valueList));
-      nameTypes.clear();
+    BuiltIn.forEachStructure(typeSystem, (structure, type) -> {
       valueList.clear();
+      structure.memberMap.values()
+          .forEach(builtIn -> valueList.add(BUILT_IN_VALUES.get(builtIn)));
+      hEnv[0] = hEnv[0]
+          .bind(structure.name, type, ImmutableList.copyOf(valueList));
     });
     return hEnv[0];
   }

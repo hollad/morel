@@ -433,12 +433,12 @@ public class MainTest {
   }
 
   @Test public void testApply() {
-    ml("List_hd [\"abc\"]")
+    ml("List.hd [\"abc\"]")
         .assertType("string");
   }
 
   @Test public void testApply2() {
-    ml("List_map (fn x => String_size x) [\"abc\", \"de\"]")
+    ml("List_map (fn x => String.size x) [\"abc\", \"de\"]")
         .assertType("int list");
   }
 

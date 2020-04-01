@@ -100,7 +100,14 @@ public class TypeResolver {
 
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
     final TypeEnvHolder typeEnvs = new TypeEnvHolder(EmptyTypeEnv.INSTANCE);
-    BuiltIn.forEachType(typeSystem, typeEnvs);
+    BuiltIn.forEach(typeSystem, (builtIn, type) -> {
+      typeEnvs.accept(builtIn.fullName, type);
+      if (builtIn.alias != null) {
+        typeEnvs.accept(builtIn.alias, type);
+      }
+    });
+    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
+        typeEnvs.accept(structure.name, type));
     env.forEachType(typeEnvs);
     final TypeEnv typeEnv = typeEnvs.typeEnv;
     final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();

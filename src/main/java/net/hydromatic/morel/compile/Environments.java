@@ -65,7 +65,7 @@ public abstract class Environments {
     for (Map.Entry<BuiltIn, Object> entry : Codes.BUILT_IN_VALUES.entrySet()) {
       BuiltIn key = entry.getKey();
       final Type type = key.typeFunction.apply(typeSystem);
-      bindings.add(Binding.of(key.mlName, type, entry.getValue()));
+      bindings.add(Binding.of(key.fullName, type, entry.getValue()));
       if (key.alias != null) {
         bindings.add(Binding.of(key.alias, type, entry.getValue()));
       }

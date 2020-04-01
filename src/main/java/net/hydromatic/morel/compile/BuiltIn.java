@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
@@ -583,8 +584,7 @@ public enum BuiltIn {
 
   public static final ImmutableMap<String, BuiltIn> BY_ML_NAME;
 
-  public static final SortedMap<String, ImmutableSortedMap<String, BuiltIn>>
-      BY_STRUCTURE;
+  public static final SortedMap<String, Structure> BY_STRUCTURE;
 
   static {
     ImmutableMap.Builder<String, BuiltIn> byMlName = ImmutableMap.builder();
@@ -605,10 +605,10 @@ public enum BuiltIn {
       }
     }
     BY_ML_NAME = byMlName.build();
-    final ImmutableSortedMap.Builder<String, ImmutableSortedMap<String, BuiltIn>>
-        b = ImmutableSortedMap.naturalOrder();
+    final ImmutableSortedMap.Builder<String, Structure> b =
+        ImmutableSortedMap.naturalOrder();
     map.forEach((structure, mapBuilder) ->
-        b.put(structure, mapBuilder.build()));
+        b.put(structure, new Structure(structure, mapBuilder.build())));
     BY_STRUCTURE = b.build();
   }
 
@@ -642,14 +642,34 @@ public enum BuiltIn {
   }
 
   /** Calls a consumer once per value. */
-  public static void forEachType(TypeSystem typeSystem,
-      BiConsumer<String, Type> consumer) {
+  public static void forEach(TypeSystem typeSystem,
+      BiConsumer<BuiltIn, Type> consumer) {
     for (BuiltIn builtIn : values()) {
       final Type type = builtIn.typeFunction.apply(typeSystem);
-      consumer.accept(builtIn.fullName, type);
-      if (builtIn.alias != null) {
-        consumer.accept(builtIn.alias, type);
-      }
+      consumer.accept(builtIn, type);
+    }
+  }
+
+  /** Calls a consumer once per structure. */
+  public static void forEachStructure(TypeSystem typeSystem,
+      BiConsumer<Structure, Type> consumer) {
+    final TreeMap<String, Type> nameTypes = new TreeMap<>(RecordType.ORDERING);
+    BY_STRUCTURE.values().forEach(structure -> {
+      nameTypes.clear();
+      structure.memberMap.forEach((name, builtIn) ->
+          nameTypes.put(name, builtIn.typeFunction.apply(typeSystem)));
+      consumer.accept(structure, typeSystem.recordType(nameTypes));
+    });
+  }
+
+  /** Built-in structure. */
+  public static class Structure {
+    public final String name;
+    public final SortedMap<String, BuiltIn> memberMap;
+
+    Structure(String name, SortedMap<String, BuiltIn> memberMap) {
+      this.name = Objects.requireNonNull(name);
+      this.memberMap = ImmutableSortedMap.copyOf(memberMap);
     }
   }
 
