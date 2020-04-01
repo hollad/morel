@@ -25,6 +25,13 @@ ignore (1 + 2);
 map;
 map (fn x => x) [];
 
+(* Structures -------------------------------------------------- *)
+List;
+List.rev;
+List.rev [1,2,3];
+
+String;
+
 (* String ------------------------------------------------------ *)
 
 (* TODO replace '_' with '.' when we can parse long identifiers;

@@ -36,8 +36,10 @@ import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Pair;
 
@@ -49,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -868,12 +872,25 @@ public abstract class Codes {
               .collect(Collectors.toList()));
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
+    final SortedMap<String, TreeMap<String, Object>> structureMap =
+        new TreeMap<>();
     BUILT_IN_VALUES.forEach((key, value) -> {
-      valueMap.put(key.mlName, value);
+      valueMap.put(key.fullName, value);
       if (key.alias != null) {
         valueMap.put(key.alias, value);
       }
+      if (key.structure != null) {
+        structureMap.compute(key.structure, (name, map) -> {
+          if (map == null) {
+            map = new TreeMap<>();
+          }
+          map.put(key.mlName, value);
+          return map;
+        });
+      }
     });
+    structureMap.forEach((structure, map) ->
+        valueMap.put(structure, ImmutableList.copyOf(map.values())));
     assert valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
         : "no implementation for "
         + minus(BuiltIn.BY_ML_NAME.keySet(), valueMap.keySet());
@@ -910,6 +927,34 @@ public abstract class Codes {
   /** Implements {@link #OP_NEGATE} for type {@code int}. */
   private static int negateInt(EvalEnv env, Object arg) {
     return -((Integer) arg);
+  }
+
+  /** Creates a compilation environment. */
+  public static Environment env(TypeSystem typeSystem,
+      Environment environment) {
+    final Environment[] hEnv = {environment};
+    BUILT_IN_VALUES.forEach((key, value) -> {
+      final Type type = key.typeFunction.apply(typeSystem);
+      hEnv[0] = hEnv[0].bind(key.fullName, type, value);
+      if (key.alias != null) {
+        hEnv[0] = hEnv[0].bind(key.alias, type, value);
+      }
+    });
+
+    final TreeMap<String, Type> nameTypes = new TreeMap<>(RecordType.ORDERING);
+    final List<Object> valueList = new ArrayList<>();
+    BuiltIn.BY_STRUCTURE.forEach((structure, map) -> {
+      map.forEach((name, builtIn) -> {
+        nameTypes.put(name, builtIn.typeFunction.apply(typeSystem));
+        valueList.add(BUILT_IN_VALUES.get(builtIn));
+      });
+      final Type recordType = typeSystem.recordType(nameTypes);
+      hEnv[0] = hEnv[0]
+          .bind(structure, recordType, ImmutableList.copyOf(valueList));
+      nameTypes.clear();
+      valueList.clear();
+    });
+    return hEnv[0];
   }
 
   /** Implements {@link #OP_NEGATE} for type {@code real}. */

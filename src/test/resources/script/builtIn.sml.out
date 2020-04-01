@@ -33,6 +33,30 @@ map (fn x => x) [];
 val it = [] : 'a list
 
 
+(* Structures -------------------------------------------------- *)
+List;
+val it =
+  {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
+   find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
+   mapPartial=fn,nil=[],nth=fn,null=fn,partition=fn,rev=fn,revAppend=fn,
+   tabulate=fn,take=fn,tl=fn}
+  : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> int) -> 'd list * 'd list -> int, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> 'n * 'n list, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, partition:('y -> bool) -> 'y list -> 'y list * 'y list, rev:'z list -> 'z list, revAppend:'ba list * 'ba list -> 'ba list, tabulate:int * (int -> 'bb) -> 'bb list, take:'bc list * int -> 'bc list, tl:'bd list -> 'bd list}
+
+List.rev;
+val it = fn : 'a list -> 'a list
+
+List.rev [1,2,3];
+val it = [3, 2, 1] : 'a
+
+
+String;
+val it =
+  {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
+   isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
+   substring=fn,translate=fn}
+  : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
+
+
 (* String ------------------------------------------------------ *)
 
 (* TODO replace '_' with '.' when we can parse long identifiers;
@@ -680,7 +704,10 @@ val it = fn : unit -> (string * string) list
 
 Sys_env ();
 val it =
-  [("List_all","forall 'a. ('a -> bool) -> 'a list -> bool"),
+  [
+   ("List",
+   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   ("List_all","forall 'a. ('a -> bool) -> 'a list -> bool"),
    ("List_app","forall 'a. ('a -> unit) -> 'a list -> unit"),
    ("List_at","forall 'a. 'a list * 'a list -> 'a list"),
    ("List_collate","forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int"),
@@ -690,8 +717,7 @@ val it =
    ("List_filter","forall 'a. ('a -> bool) -> 'a list -> 'a list"),
    ("List_find","forall 'a. ('a -> bool) -> 'a list -> 'a"),
    ("List_foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_getItem","forall 'a. 'a list -> 'a * 'a list"),...]
+   ("List_foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),...]
   : (string * string) list
 
 
@@ -700,7 +726,10 @@ val it = fn : unit -> (string * string) list
 
 env ();
 val it =
-  [("List_all","forall 'a. ('a -> bool) -> 'a list -> bool"),
+  [
+   ("List",
+   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   ("List_all","forall 'a. ('a -> bool) -> 'a list -> bool"),
    ("List_app","forall 'a. ('a -> unit) -> 'a list -> unit"),
    ("List_at","forall 'a. 'a list * 'a list -> 'a list"),
    ("List_collate","forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int"),
@@ -710,6 +739,5 @@ val it =
    ("List_filter","forall 'a. ('a -> bool) -> 'a list -> 'a list"),
    ("List_find","forall 'a. ('a -> bool) -> 'a list -> 'a"),
    ("List_foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_getItem","forall 'a. 'a list -> 'a * 'a list"),...]
+   ("List_foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),...]
   : (string * string) list

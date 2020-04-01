@@ -386,7 +386,7 @@ public enum AstBuilder {
   }
 
   public Ast.Exp map(Pos pos, Ast.Exp e1, Ast.Exp e2) {
-    return apply(apply(id(pos, BuiltIn.LIST_MAP.mlName), e1), e2);
+    return apply(apply(id(pos, BuiltIn.LIST_MAP.fullName), e1), e2);
   }
 
   public Ast.Order order(Pos pos, Iterable<Ast.OrderItem> orderItems) {
