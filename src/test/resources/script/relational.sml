@@ -149,10 +149,9 @@ from e in emps, d in depts
 
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
-(* disabled due to "::"
 let
   fun exists [] = false
-    | exists hd :: tl = true
+    | exists (hd :: tl) = true
 in
   from e in emps
   where exists (from d in depts
@@ -160,11 +159,8 @@ in
                 andalso d.name = "Engineering")
   yield e.name
 end;
-val it = ["Shaggy","Scooby"] : string list
-*)
 
 (*) in (defining the "in_" function ourselves)
-(* disabled due to "::"
 let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)
@@ -175,8 +171,13 @@ in
                 yield d.deptno)
   yield e.name
 end;
-val it = ["Shaggy","Scooby"] : string list
-*)
+
+(*) inside
+from e in emps
+  where e.deptno inside (from d in depts
+    where d.name = "Engineering"
+    yield d.deptno)
+yield e.name;
 
 (*) foldl function (built into SML)
 let

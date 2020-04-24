@@ -338,6 +338,14 @@ Relational_min [false, true];
 [1, 2, 3] intersect [2, 3, 4] except [1, 3, 5];
 [1, 2, 3] except [1, 3, 5] intersect [2, 3, 4];
 
+1 inside [1, 2, 3];
+1 inside [2, 3, 4];
+1 inside [];
+[] inside [[0], [1, 2]];
+[] inside [[0], [], [1, 2]];
+(1, 2) inside [(0, 1), (1, 2)];
+(1, 2) inside [(0, 1), (2, 3)];
+
 (* Sys --------------------------------------------------------- *)
 
 (*) val env : unit -> string list

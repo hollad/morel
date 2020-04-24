@@ -213,6 +213,10 @@ public enum AstBuilder {
     return infix(Op.GE, a0, a1);
   }
 
+  public Ast.Exp inside(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.INSIDE, a0, a1);
+  }
+
   public Ast.Exp andAlso(Ast.Exp a0, Ast.Exp a1) {
     return infix(Op.ANDALSO, a0, a1);
   }

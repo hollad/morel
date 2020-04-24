@@ -720,6 +720,28 @@ val it = [2] : int list
 val it = [1,2] : int list
 
 
+1 inside [1, 2, 3];
+val it = true : bool
+
+1 inside [2, 3, 4];
+val it = false : bool
+
+1 inside [];
+val it = false : bool
+
+[] inside [[0], [1, 2]];
+val it = false : bool
+
+[] inside [[0], [], [1, 2]];
+val it = true : bool
+
+(1, 2) inside [(0, 1), (1, 2)];
+val it = true : bool
+
+(1, 2) inside [(0, 1), (2, 3)];
+val it = false : bool
+
+
 (* Sys --------------------------------------------------------- *)
 
 (*) val env : unit -> string list

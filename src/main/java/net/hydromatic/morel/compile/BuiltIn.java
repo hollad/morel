@@ -127,6 +127,11 @@ public enum BuiltIn {
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
+  /** Infix operator "inside", of type "&alpha; * &alpha; list; &rarr; bool". */
+  OP_INSIDE("op inside", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
+
   /** Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;"
    * (where &alpha; must be numeric). */
   OP_MINUS("op -", PrimitiveType.INT, ts ->

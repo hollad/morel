@@ -624,6 +624,10 @@ Exp expression4() :
     <GE> e2 = expression5() {
       e = ast.greaterThanOrEqual(e, e2);
     }
+  |
+    <INSIDE> e2 = expression5() {
+      e = ast.inside(e, e2);
+    }
   )*
   { return e; }
 }
@@ -1238,6 +1242,7 @@ AstNode statementSemicolon() :
 | < FUN: "FUN" >
 | < IF: "IF" >
 | < IN: "IN" >
+| < INSIDE: "INSIDE" >
 | < INTERSECT: "INTERSECT" >
 | < LET: "LET" >
 | < MOD: "MOD" >

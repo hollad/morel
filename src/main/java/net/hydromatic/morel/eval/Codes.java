@@ -135,6 +135,17 @@ public abstract class Codes {
     return v0.compareTo(v1) >= 0;
   }
 
+  /** @see BuiltIn#OP_INSIDE */
+  private static final Applicable OP_INSIDE = Codes::inside;
+
+  /** Implements {@link #OP_INSIDE}. */
+  private static boolean inside(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Object v0 = list.get(0);
+    final List v1 = (List) list.get(1);
+    return v1.contains(v0);
+  }
+
   /** Returns a Code that evaluates "andalso". */
   public static Code andAlso(Code code0, Code code1) {
     // Lazy evaluation. If code0 returns false, code1 is never evaluated.
@@ -999,6 +1010,7 @@ public abstract class Codes {
           .put(BuiltIn.OP_LE, OP_LE)
           .put(BuiltIn.OP_LT, OP_LT)
           .put(BuiltIn.OP_NE, OP_NE)
+          .put(BuiltIn.OP_INSIDE, OP_INSIDE)
           .put(BuiltIn.OP_MINUS, OP_MINUS)
           .put(BuiltIn.OP_MOD, OP_MOD)
           .put(BuiltIn.OP_NEGATE, OP_NEGATE)
